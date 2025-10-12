@@ -8,7 +8,6 @@ import citro.state.CitroState;
 
 import haxe3ds.applet.Error;
 import haxe3ds.services.APT;
-import haxe3ds.services.HID;
 import haxe3ds.OS;
 
 import cxx.num.UInt64;

@@ -108,8 +108,7 @@ class CitroCamera extends CitroObject {
      * @since 1.1.0
      */
     public function follow(object:CitroObject) {
-        final scX:Float = bottomCam ? 160 : 200;
-        x = object.x - scX + (object.width / 2);
+        x = object.x - (bottomCam ? 160 : 200) + (object.width / 2);
         y = object.y - 120 + (object.height / 2);
     }
 

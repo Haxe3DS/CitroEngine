@@ -15,7 +15,7 @@ private typedef CitroAnimateHeader = {
  * A class for animation purpose.
  */
 class CitroAnimate extends CitroObject {
-    var timeLeft:Int = 0;
+    var timeLeft:Float = 0;
     var sprites:Map<String, CitroAnimateHeader> = [];
 
     /**
@@ -105,7 +105,7 @@ class CitroAnimate extends CitroObject {
 
         for (key in sprites.keys()) {
             if (key == '${animation}-0') {
-                timeLeft = Std.int(1000 / fps);
+                timeLeft = 1000 / fps;
                 curAnim = animation;
                 finished = false;
 
@@ -125,23 +125,17 @@ class CitroAnimate extends CitroObject {
         return '${curAnim}-$frame';
     }
 
-    var RnB:Bool = false;
     override function update(delta:Int):Bool {
         if (isDestroyed) {
             return false;
         }
 
-        if (RnB) {
-            timeLeft -= delta;
-        }
-
-        RnB = false;
-        if (timeLeft < 1) {
-            timeLeft = Std.int(1000 / fps);
+        if ((timeLeft -= (render == BOTH ? delta / 2 : delta)) < 1) {
+            timeLeft = 1000 / fps;
             frame++;
             if (!sprites.exists(format())) {
-                if (finished = true && looped) {
-                    finished = false;
+                finished = true;
+                if (looped) {
                     play(curAnim);
                 } else {
                     frame--;
@@ -165,10 +159,6 @@ class CitroAnimate extends CitroObject {
             sprite.scale  = scale;
             sprite.x = x - (header.frameX * scale.x);
             sprite.y = y - (header.frameY * scale.y);
-
-            if (render == BOTH) {
-                RnB = true;
-            }
 
             return sprite.update(delta);
         }
