@@ -74,9 +74,9 @@ class CitroCamera extends CitroObject {
      * @param spr Sprite to use to render as, has error handling!
      * @param delta Delta to use (needed for sprite's update time)
      */
-    public function renderObj(spr:CitroObject, delta:Int) {
+    public function renderObj(spr:CitroObject, delta:Int):Bool {
         if (!CitroG.isNotNull(spr)) {
-            return;
+            return false;
         }
 
         final oldX:Float = spr.x;
@@ -93,13 +93,15 @@ class CitroCamera extends CitroObject {
         spr.y = (oldY + curY - 120) * zoom + 120;
         spr.alpha *= alpha;
 
-        spr.update(delta);
+        final out:Bool = spr.update(delta);
 
         spr.x = oldX;
         spr.y = oldY;
         spr.scale.x = oldSX;
         spr.scale.y = oldSY;
         spr.alpha = oldA;
+
+        return out;
     }
 
     /**
