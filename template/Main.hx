@@ -9,6 +9,14 @@ function main() {
 	GFX.initDefault();
 	RomFS.init();
 
+	untyped __cpp__('
+		SDL_Init(SDL_INIT_AUDIO);
+        Mix_Init(MIX_INIT_OGG);
+        Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 1, 4096);
+        Mix_AllocateChannels(256);
+        Mix_Volume(-1, MIX_MAX_VOLUME);
+	');
+
 	/**
 	 * This is also where your game state will be located.
 	 */

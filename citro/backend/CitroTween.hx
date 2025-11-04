@@ -136,7 +136,7 @@ class CitroTween {
      * @param onComplete Callback function for tween completion.
      */
     public static function tweenObject(object:CitroObject, props:Array<CitroTweenProps>, duration:Float = 1, easing:CitroEase = LINEAR, onComplete:Void->Void = null) {
-        var propStates:Array<CitroTweenProps> = [];
+        final propStates:Array<CitroTweenProps> = [];
         for (prop in props) {
             propStates.push({
                 variableToUse: prop.variableToUse,
@@ -232,19 +232,14 @@ class CitroTween {
 		return t * t * t * (t * (t * 6 - 15) + 10);
 	}
 
-    static final B1:Float = 1 / 2.75;
-	static final B2:Float = 2 / 2.75;
 	static final B3:Float = 1.5 / 2.75;
-	static final B4:Float = 2.5 / 2.75;
 	static final B5:Float = 2.25 / 2.75;
 	static final B6:Float = 2.625 / 2.75;
-    static final ELASTIC_AMPLITUDE:Float = 1;
-	static final ELASTIC_PERIOD:Float = 0.4;
 
     static function bounceOut(t:Float):Float {
-		if (t < B1) return 7.5625 * t * t;
-		if (t < B2) return 7.5625 * (t - B3) * (t - B3) + .75;
-		if (t < B4) return 7.5625 * (t - B5) * (t - B5) + .9375;
+		if (t < 1 / 2.75) return 7.5625 * t * t;
+		if (t < 2 / 2.75) return 7.5625 * (t - B3) * (t - B3) + .75;
+		if (t < 2.5 / 2.75) return 7.5625 * (t - B5) * (t - B5) + .9375;
 		return 7.5625 * (t - B6) * (t - B6) + .984375;
 	}
 
@@ -303,9 +298,9 @@ class CitroTween {
             case BACK_OUT: 1 - (--t) * (t) * (-2.70158 * t - 1.70158);
             case BACK_INOUT: backInOut(t);
             
-            case ELASTIC_IN: -(ELASTIC_AMPLITUDE * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - (ELASTIC_PERIOD / (2 * Math.PI) * Math.asin(1 / ELASTIC_AMPLITUDE))) * (2 * Math.PI) / ELASTIC_PERIOD));
-            case ELASTIC_OUT: (ELASTIC_AMPLITUDE * Math.pow(2, -10 * t) * Math.sin((t - (ELASTIC_PERIOD / (2 * Math.PI) * Math.asin(1 / ELASTIC_AMPLITUDE))) * (2 * Math.PI) / ELASTIC_PERIOD) + 1);
-            case ELASTIC_INOUT: t < 0.5 ? -0.5 * (Math.pow(2, 10 * (t -= 0.5)) * Math.sin((t - (ELASTIC_PERIOD / 4)) * (2 * Math.PI) / ELASTIC_PERIOD)) : Math.pow(2, -10 * (t -= 0.5)) * Math.sin((t - (ELASTIC_PERIOD / 4)) * (2 * Math.PI) / ELASTIC_PERIOD) * 0.5 + 1;
+            case ELASTIC_IN: -(1 * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - (.4 / (2 * Math.PI) * Math.asin(1 / 1))) * (2 * Math.PI) / .4));
+            case ELASTIC_OUT: (1 * Math.pow(2, -10 * t) * Math.sin((t - (.4 / (2 * Math.PI) * Math.asin(1 / 1))) * (2 * Math.PI) / .4) + 1);
+            case ELASTIC_INOUT: t < 0.5 ? -0.5 * (Math.pow(2, 10 * (t -= 0.5)) * Math.sin((t - (.4 / 4)) * (2 * Math.PI) / .4)) : Math.pow(2, -10 * (t -= 0.5)) * Math.sin((t - (.4 / 4)) * (2 * Math.PI) / .4) * 0.5 + 1;
             
             default: t;
         }

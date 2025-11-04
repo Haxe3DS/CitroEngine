@@ -20,6 +20,7 @@ public:
     virtual void create();
     virtual void update(int delta);
     virtual void destroy();
+    virtual bool check(std::shared_ptr<citro::object::CitroObject> member);
     virtual void add(std::shared_ptr<citro::object::CitroObject> member);
     virtual void insert(int index, std::shared_ptr<citro::object::CitroObject> member);
     virtual void remove(std::shared_ptr<citro::object::CitroObject> member);

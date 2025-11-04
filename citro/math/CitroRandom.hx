@@ -42,10 +42,27 @@ class CitroRandom {
     }
 
     /**
-     * Returns a random color by ranging through 0xFF000000 (black) to 0xFFFFFFFF (white).
+     * Returns a random color depending by the arguments, does a lot of bit-shifting though?
+     * @param from The mininum value to use.
+     * @param to The maximum value to use.
+     * @return A UInt32 color bit shifted.
      */
-    public function color():UInt32 {
-        return untyped __cpp__('C2D_Color32(integer(0, 255), integer(0, 255), integer(0, 255), 255)');
+    public function color(from:Int = 0xFF000000, to:Int = 0xFFFFFFFF):UInt32 {
+        final fromArr:Array<Int> = [for (i in 0...4) (from >> i * 8) & 0xFF], toArr = [for (i in 0...4) (to >> i * 8) & 0xFF];
+
+        return integer(fromArr[3], toArr[3]) << 24 |
+            integer(fromArr[2], toArr[2]) << 16 |
+            integer(fromArr[1], toArr[1]) << 8 |
+            integer(fromArr[0], toArr[0]);
+    }
+
+    /**
+     * Gets and picks a random option from this array.
+     * @param Array The array to pick.
+     * @return The random option that was received.
+     */
+    public function array<T>(Array:Array<T>):T {
+        return Array[integer(0, Array.length - 1)];
     }
 
     public function new() {};

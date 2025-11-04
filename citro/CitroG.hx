@@ -1,5 +1,6 @@
 package citro;
 
+import haxe3ds.applet.WebBrowser;
 import haxe3ds.services.HID;
 import citro.backend.CitroTween;
 import citro.backend.CitroTimer;
@@ -24,17 +25,17 @@ class CitroG {
     /**
      * Current width for the Top 3DS Screen.
      */
-    public static var width(default, null):Int = 400;
+    public static var WIDTH(default, null):Int = 400;
 
     /**
      * Current height for the Top and Bottom 3DS Screen.
      */
-    public static var height(default, null):Int = 240;
+    public static var HEIGHT(default, null):Int = 240;
 
     /**
      * Current width for the Bottom 3DS Screen
      */
-    public static var widthBottom(default, null):Int = 240;
+    public static var BOTTOM_WIDTH(default, null):Int = 240;
 
     /**
      * Variable for random management.
@@ -89,29 +90,12 @@ class CitroG {
     }
 
     /**
-     * Opens an URL using the 3DS's Internet Browser method.
+     * Opens an URL using the 3DS's Internet Browser method, wrapper of `haxe3ds.applet.WebBrowser.launchURL`.
      * 
-     * #### Note:
-     * 
-     * This file is COPIED from this url: https://gitlab.com/3ds-netpass/netpass/-/blob/main/source/utils.c?ref_type=heads#L395-L409
-     * 
-     * @param url The url to open as.
+     * @param url The URL to open as.
      */
     public static function openURL(url:String) {
-        untyped __cpp__('
-            if (url == "NULL") {
-                aptLaunchSystemApplet(APPID_WEB, 0, 0, 0);
-                return;
-            }
-            size_t url_len = strlen(url.c_str()) + 1;
-            if (url_len > 1024) return openURL("NULL");
-            size_t buffer_size = url_len + 1;
-            u8* buffer = (u8*)malloc(buffer_size);
-            if (!buffer) return openURL("NULL");
-            memcpy(buffer, url.c_str(), url_len);
-            buffer[url_len] = 0;
-            aptLaunchSystemApplet(APPID_WEB, buffer, buffer_size, 0);
-        ');
+        WebBrowser.launchURL(url);
     }
 
     /**
@@ -132,7 +116,7 @@ class CitroG {
     }
 
     /**
-     * Check if a shared pointer is not null or nullptr, USEFUL to fix quirky 3DS luma/dev exceptions and always use it at really risky things!
+     * Check if a shared pointer is not null, USEFUL to fix quirky 3DS luma/dev exceptions and always use it at really risky things!
      * @param self A shared pointer variable to check.
      * @return `true` if it's not null, `false` if null.
      */
@@ -153,7 +137,7 @@ class CitroG {
     }
 }
 
-class CitroSoundG {
+private class CitroSoundG {
     public function new() {}
 
     /**
@@ -163,7 +147,7 @@ class CitroSoundG {
 
     /**
      * Plays a sound fast without using CitroSound class, will automatically be stored to a map.
-     * @param soundPath Sound Path found in romfs, don't include `romfs:/`.
+     * @param soundPath Sound Path found in romfs.
      * @param stopNow Should stop if sound is currently playing?
      */
     public function play(soundPath:String) {
@@ -172,7 +156,7 @@ class CitroSoundG {
             return;
         }
 
-        var snd:CitroSound = new CitroSound(soundPath);
+        final snd:CitroSound = new CitroSound(soundPath);
         storedSounds.set(soundPath, snd);
         snd.play();
     }
@@ -182,7 +166,7 @@ class CitroSoundG {
      * 
      * Upon loading sound, it will be stored in `storedSounds`.
      * 
-     * @param soundPath Current path to sound found in `romfs:/`, don't include the prefix.
+     * @param soundPath Current path to sound.
      * @return A CitroSound class loaded.
      */
     public function load(soundPath:String, store:Bool = true):CitroSound {
@@ -191,7 +175,7 @@ class CitroSoundG {
 
     /**
      * Precaches a sound that can be used later.
-     * @param soundPath Sound path to use, do not include the `romfs:/` prefix since it does that for you.
+     * @param soundPath Sound path to use.
      * @return A `CitroSound` class, only used for `CitroG.sound.load()`.
      */
     public function precache(soundPath:String):CitroSound {
@@ -199,8 +183,38 @@ class CitroSoundG {
             return storedSounds[soundPath];
         }
 
-        var snd:CitroSound = new CitroSound(soundPath);
+        final snd:CitroSound = new CitroSound(soundPath);
         storedSounds.set(soundPath, snd);
         return snd;
+    }
+
+    /**
+     * Cleans memory by destroying the audio and clearing the map.
+     */
+    public function clean() {
+        for (sound in storedSounds) {
+            sound.destroy();
+        }
+        storedSounds.clear();
+    }
+
+    /**
+     * The sound but for music purpose (supposedly increases the speed)
+     */
+    public var music:CitroMusicG = new CitroMusicG();
+}
+
+@:cppFileCode('Mix_Music* mixer = NULL;')
+private class CitroMusicG {
+    public function new() {}
+
+    /**
+     * Plays a music from path.
+     * @param path Path of the music to play.
+     * @return "Good" if file is good, else means failed.
+     */
+    public function play(path:String, loop:Bool = true):String {
+        untyped __cpp__('mixer = Mix_LoadMUS(path.c_str())');
+        return untyped __cpp__('!mixer ? SDL_GetError() : Mix_PlayMusic(mixer, loop ? -1 : 0) != 0 ? SDL_GetError() : "Good";');
     }
 }

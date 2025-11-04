@@ -1,6 +1,5 @@
 package citro;
 
-import cxx.num.UInt8;
 import cxx.num.UInt64;
 
 /**
@@ -11,94 +10,74 @@ import cxx.num.UInt64;
  * @since 1.0.0
  */
 @:headerCode('
+#include <SDL/SDL_mixer.h>
 #include <3ds.h>
 #include <tremor/ivorbisfile.h>
-#include <cwav.h>
 ')
 
 @:headerClassCode('
-    CWAV* cwav;
+    Mix_Chunk* mixer;
     bool canPlay;
     u64 oldTime;
     u64 oldPauseTime;
 ')
 class CitroSound {
     /**
+     * Current length of this sound.
+     */
+    public var length(default, null):Int = 0;
+
+    /**
      * Current file path read.
      */
     public var filePath(default, null):String;
 
     /**
-     * Changes the playback speed. Default: 1.0 (no pitch change).
+     * Current channel that is playing.
      */
-    public var pitch(get, set):Float;
-    function get_pitch():Float {
-        return untyped __cpp__('cwav->pitch');
-    }
-    function set_pitch(pitch:Float):Float {
-        untyped __cpp__('ndspChnSetRate(channel, (float)(cwav->sampleRate) * pitch2)');
-        return untyped __cpp__('cwav->pitch = (float)(pitch2)');
+    public var channel(default, null):Int;
+
+    /**
+     * Current time in progress in U64.
+     * 
+     * Note: This calculation is weird.
+     */
+    public var time(get, null):UInt64;
+    function get_time():UInt64 {
+        return untyped __cpp__('this->paused ? this->time : osGetTime() - this->oldTime');
     }
 
     /**
-     * The current channel it's playing on.
+     * Whetever or not if it's paused.
      */
-    public var channel(default, null):UInt8;
+    public var paused(default, null):Bool = true;
 
     /**
-     * Whetever or not this sound should loop or not, default: false.
+     * Whever if the sound should loop forever or not.
      */
-    public var looped(get, set):Bool;
-    function get_looped():Bool {
-        return untyped __cpp__('cwav->isLooped == 1');
-    }
-    function set_looped(looped:Bool):Bool {
-        return untyped __cpp__('cwav->isLooped = looped2');
-    }
+    public var loop:Bool = false;
 
     /**
-     * Value in the range [0.0, 1.0]. 0.0 muted and 1.0 full volume. Default: 1.0
-     */
-    public var volume(get, set):Float;
-    function get_volume():Float {
-        return untyped __cpp__('cwav->volume');
-    }
-    function set_volume(volume:Float):Float {
-        untyped __cpp__('
-            cwav->volume = (float)(volume2);
-
-            float mix[12] = {0};
-            for (int i = 0; i < 4; i++) mix[i] = (i % 2 == 0 ? 0.8f : 0.2f) * cwav->volume;
-            ndspChnSetMix(channel, mix)
-        ');
-        return volume;
-    }
-
-    /**
-     * Creates a new CWAV sound from file path and plays it for you.
+     * Creates a new Mixer Sound from file path and plays it for you.
      * 
-     * ~~FFMPEG Command (required): `ffmpeg -i "input.wav" -ar 22050 -ac 1 -c:a libvorbis -b:a 96k "output.ogg"`~~
-     * 
-     * ~~Requires Audacity for this one.~~
-     * 
-     * You will need to have `cwavtool` downloaded from https://github.com/PabloMK7/cwavtool and both cwav and ncsnd installed. (Encoding `dspadpcm` is recommended for less size)
-     * 
-     * @param file File path in romfs to use as, not required to use `romfs:/`, must be as a `bcwav` extension.
+     * FFMPEG Command (required): `ffmpeg -i "input.wav" -ar 44100 -ac 1 -c:a libvorbis -b:a 96k "output.ogg"`
+     * @param file File path in romfs to use as, not required to use `romfs:/`
      */
     public function new(file:String) {
         untyped __cpp__('
-            char path[256];
-            snprintf(path, 256, "romfs:/%s", file.c_str());
-
             this->canPlay = false;
-            this->cwav = (CWAV*)malloc(sizeof(CWAV));
-            cwavFileLoad(this->cwav, path, 1);
 
-            if (cwav->loadStatus == CWAV_SUCCESS) {
-                cwav->isLooped = false;
+            const char* path = file.c_str();
+            this->mixer = Mix_LoadWAV(path);
+            if (this->mixer) {
                 canPlay = true;
-            } else {
-                cwavFileFree(cwav);
+
+                FILE* fh = fopen(path, "rb");
+                OggVorbis_File vf;
+                ov_open(fh, &vf, nullptr, 0);
+                this->length = static_cast<int>(ov_time_total(&vf, -1));
+                ov_clear(&vf);
+                fclose(fh);
             }
 
             this->filePath = std::string(path);
@@ -106,27 +85,61 @@ class CitroSound {
     }
 
     /**
-     * Plays the current loaded mixer, if sound is currently playing it will pause, no sound will play if failed (likely if sound doesn't exist or has failed).
+     * Plays the current loaded mixer, if sound is currently playing it will pause, no sound will play if failed (likely if sound doesn't exist).
+     * 
+     * @param stopNow Should actually stop the current audio playing?
      */
-    public function play() {
-        untyped __cpp__('if (this->canPlay) channel = cwavPlay(cwav, 0, -1).monoLeftChannel');
+    public function play(stopNow:Bool = false) {
+        if (paused && stopNow) {
+            pause();
+        }
+
+        untyped __cpp__('
+            if (this->canPlay) {
+                this->channel = Mix_PlayChannel(-1, this->mixer, this->loop ? -1 : 0);
+                this->oldTime = osGetTime();
+                this->paused = false;
+            }
+        ');
+    }
+
+    /**
+     * Pauses the current channel that is currently playing.
+     */
+    public function pause() {
+        untyped __cpp__('
+            if (this->canPlay && !this->paused) {
+                Mix_Pause(this->channel);
+                this->paused = true;
+                this->oldPauseTime = osGetTime();
+            }
+        ');
     }
 
     /**
      * Resumes the channel that is currently paused.
      */
-    public function stop() {
-        untyped __cpp__('if (this->canPlay) cwavStop(cwav, -1, -1)');
+    public function resume() {
+        untyped __cpp__('
+            if (this->canPlay && this->paused) {
+                Mix_Resume(this->channel);
+                this->paused = false;
+                this->oldTime += osGetTime() - this->oldPauseTime;
+                this->oldPauseTime = 0;
+            }
+        ');
     }
     
     /**
      * Destroys the current sound and frees up memory.
      */
     public function destroy() {
+        pause();
         untyped __cpp__('
             if (this->canPlay) {
-                cwavFileFree(cwav);
+                Mix_FreeChunk(this->mixer);
                 this->canPlay = false;
+                this->paused = true;
             }
         ');
     }

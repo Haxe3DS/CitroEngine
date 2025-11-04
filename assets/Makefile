@@ -62,7 +62,7 @@ RSF             := $(TOPDIR)/$(RESOURCES)/template.rsf
 #---------------------------------------------------------------------------------
 ARCH        := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 COMMON      := -Wall -mword-relocations -fomit-frame-pointer -ffunction-sections $(ARCH) $(INCLUDE) -D__3DS__
-CFLAGS      := $(COMMON) -std=c++23 -Wno-unused-variable -g
+CFLAGS      := $(COMMON) -std=c++23 -Wno-unused-variable -g -L$$DEVKITPRO/portlibs/3ds/lib -I$$DEVKITPRO/portlibs/3ds/include
 CXXFLAGS    := $(CFLAGS) -w
 ASFLAGS     := $(ARCH)
 LDFLAGS     = -specs=3dsx.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
@@ -70,13 +70,13 @@ LDFLAGS     = -specs=3dsx.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 #---------------------------------------------------------------------------------
 # Libraries needed to link into the executable.
 #---------------------------------------------------------------------------------
-LIBS	:= -lcitro3d -lcitro2d -lctru -lm -lcitro3d -lcitro2d -lvorbisidec -logg -lcwav -lncsnd
+LIBS	:=  -lcitro3d -lcitro2d -L$$DEVKITPRO/portlibs/3ds/lib -march=armv6k -mfloat-abi=hard -L$$DEVKITPRO/portlibs/3ds -lSDL -lSDL_mixer -lSDL_image -lSDL_ttf -lmad -logg -lmikmod -lvorbisidec -logg -lSDL -lcitro3d -lcitro2d -lctru -lm -L$$DEVKITPRO/libctru/lib
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) $(CTRULIB) $(DEVKITPRO)/libcwav $(DEVKITPRO)/libncsnd
+LIBDIRS	:= $(PORTLIBS) $(CTRULIB)
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional

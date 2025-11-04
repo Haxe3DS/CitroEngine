@@ -39,7 +39,7 @@ class CitroState {
     /**
      * Constructor called when state has been switched.
      * 
-     * # WILL DESTROY EVERY SPRITE.
+     * ## DO NOT CALL THIS CONSTRUCTOR.
      */
     public function destroy() {
         for (member in members) {
@@ -49,11 +49,30 @@ class CitroState {
         members = [];
     }
 
+    function check(member:CitroObject):Bool {
+        if (member == null)
+            return true;
+
+        if (members.indexOf(member) > -1)
+            return true;
+
+        return false;
+    }
+
     /**
      * Adds a CitroObject to game and displays it every frame.
      * @param member An object to add as.
      */
     public function add(member:CitroObject) {
+        if (check(member))
+            return;
+
+        final index:Int = members.indexOf(null);
+        if (index != -1) {
+            members[index] = member;
+            return;
+        }
+
         members.push(member);
     }
 
@@ -63,6 +82,14 @@ class CitroState {
      * @param member An object to insert as.
      */
     public function insert(index:Int, member:CitroObject) {
+        if (check(member))
+            return;
+
+        if (index < members.length && members[index] == null) {
+            members[index] = member;
+            return;
+        }
+
         members.insert(index, member);
     }
 

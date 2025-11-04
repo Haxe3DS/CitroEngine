@@ -9,14 +9,14 @@ import citro.state.CitroState;
 
 class CitroStartup extends CitroState {
     var logo:CitroSprite = new CitroSprite();
-    var coin:CitroSound = new CitroSound("citro/coin.bcwav");
+    var coin:CitroSound  = new CitroSound("romfs:/citro/coin.ogg");
 
     override function create() {
         super.create();
 
         coin.play();
 
-        logo.loadGraphic("citro/startup.t3x");
+        logo.loadGraphic("romfs:/citro/startup.t3x");
         logo.screenCenter();
         add(logo);
 
@@ -33,6 +33,11 @@ class CitroStartup extends CitroState {
             }], 0.7, CUBE_IN, () -> {
                 CitroTimer.start(0.1, () -> {
                     coin.destroy();
+                    coin = null;
+
+                    logo.destroy();
+                    logo = null;
+
                     CitroG.switchState(CitroInit.oldCS);
                     CitroInit.oldCS = null;
                 });

@@ -16,9 +16,7 @@ typedef struct {
 #define colorConvert(e) (((e) & 0xFF00FF00) | (((e) >> 16) & 0xFF) | (((e) & 0xFF) << 16))
 ')
 
-@:headerClassCode('
-    C2D_Data data;
-')
+@:headerClassCode('C2D_Data data;')
 
 @:cppFileCode('#include "citro_CitroInit.h"')
 class CitroSprite extends CitroObject {
@@ -55,12 +53,11 @@ class CitroSprite extends CitroObject {
 
     /**
      * Loads an image graphic as a .t3x file
-     * @param file File path to use, not needed to include `romfs:/` cause it does it for you, file must end with .t3x
+     * @param file File path to use, file must end with .t3x
      * @return true if successfully loaded, false if not loaded.
      */
     public function loadGraphic(file:String):Bool {
         untyped __cpp__('
-            file = "romfs:/" + file;
             this->data.ss = C2D_SpriteSheetLoad(file.c_str());
 
             if (this->data.ss == NULL || this->data.ss == nullptr) {
