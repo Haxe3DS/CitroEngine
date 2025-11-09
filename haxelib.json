@@ -1,15 +1,15 @@
 {
-    "name": "CitroEngine",
-    "url" : "https://github.com/NAEL2XD/CitroEngine",
-    "license": "MIT",
-    "tags": ["3ds", "devkitpro", "citro2d", "citro3d", "homebrew"],
-    "description": "Make 3DS Games, just like making pc/mobile games using haxeflixel!",
-    "version": "1.0.0",
-    "releasenote": "Initial Release",
-    "contributors": ["NAEL2XD"],
-    "dependencies": {
-        "haxe3ds": "git:https://github.com/NAEL2XD/Haxe3DS",
-        "reflaxe.cpp": "git:https://github.com/Slushi-Github/reflaxe.CPP",
-        "reflaxe": "git:https://github.com/SomeRanDev/reflaxe"
-    }
+	"name": "CitroEngine",
+	"url" : "https://github.com/NAEL2XD/CitroEngine",
+	"license": "MIT",
+	"tags": ["3ds", "devkitpro", "citro2d", "citro3d", "homebrew"],
+	"description": "Make 3DS Games, just like making pc/mobile games using haxeflixel!",
+	"version": "1.0.0",
+	"releasenote": "Initial Release",
+	"contributors": ["NAEL2XD"],
+	"dependencies": {
+		"haxe3ds": "git:https://github.com/NAEL2XD/Haxe3DS",
+		"reflaxe.cpp": "git:https://github.com/Slushi-Github/reflaxe.CPP",
+		"reflaxe": "git:https://github.com/SomeRanDev/reflaxe"
+	}
 }

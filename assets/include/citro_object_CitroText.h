@@ -19,7 +19,7 @@ class CitroText: public citro::object::CitroObject {
 public:
 	C2D_Font defaultFont;
 	C3D_Mtx matrix;
-    C2D_Text c2dText;
+	C2D_Text c2dText;
 	std::string text;
 	int borderStyle;
 	int alignment;
