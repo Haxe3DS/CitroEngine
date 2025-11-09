@@ -219,7 +219,6 @@ private class CitroMusicG {
 	 * @return "Good" if file is good, else means failed.
 	 */
 	public function play(path:String, loop:Bool = true):String {
-		untyped __cpp__('mixer = Mix_LoadMUS(path.c_str())');
-		return untyped __cpp__('!mixer ? SDL_GetError() : Mix_PlayMusic(mixer, loop ? -1 : 0) != 0 ? SDL_GetError() : "Good";');
+		return untyped __cpp__('!(mixer = Mix_LoadMUS(path.c_str())) ? SDL_GetError() : Mix_PlayMusic(mixer, loop ? -1 : 0) != 0 ? SDL_GetError() : "Good";');
 	}
 }
