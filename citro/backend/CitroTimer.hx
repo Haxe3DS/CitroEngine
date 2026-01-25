@@ -1,14 +1,10 @@
 package citro.backend;
 
-@:headerCode('
-#include <limits>
-#include <3ds.h>
-#include "citro_CitroInit.h"
-')
+import haxe3ds.OS;
 
 private typedef TimerMetadata = {
-	oldTime:Float,
-	ms:Int,
+	targetTime:Int,
+	osTime:Int,
 	onComplete:Void->Void,
 	loopsLeft:Int,
 	ranInState:Bool
@@ -18,45 +14,62 @@ private typedef TimerMetadata = {
  * Class for timer handlers and for callbacks.
  */
 class CitroTimer {
-	public static var timers:Array<TimerMetadata> = [];
+	static var timers:Array<TimerMetadata> = [];
 
 	/**
 	 * Creates a new timer specified from arguments provided.
+	 * 
+	 * Note:
+	 * - If you use a small number, it will not run as per say 0.01 seconds, it triggers per frame.
+	 * 
 	 * @param seconds The current total of seconds to use.
 	 * @param onComplete Callback function to use.
 	 * @param loops How many loops do you wanna use? 0 or less for Infinite.
 	 */
-	public static function start(seconds:Float, onComplete:Void->Void, loops:Int = 1) {
+	public static function start(seconds:Float, onComplete:Void->Void, loops:Int = -1) {
 		timers.push({
-			oldTime: seconds,
-			ms: Std.int(seconds * 1000),
+			targetTime: Std.int(seconds * 1000),
+			osTime: OS.time.toInt(),
 			onComplete: onComplete,
-			loopsLeft: loops <= 0 ? untyped __cpp__('std::numeric_limits<int>::max()') : loops,
-			ranInState: !CitroG.isNotNull(CitroInit.subState)
+			loopsLeft: loops < 1 ? -1 : Std.int(Math.abs(loops)),
+			ranInState: CitroG.substate == null
 		});
 	}
 
 	/**
 	 * Should not be used.
 	 */
-	public static function update(delta:Int) {
-		if (timers.length == 0)
+	public static function update() {
+		if (timers.length == 0) {
 			return;
+		}
 
+		final osTime:Int = OS.time.toInt();
 		for (timer in timers) {
-			if (timer.ranInState == CitroG.isNotNull(CitroInit.subState))
+			if (timer.ranInState == (CitroG.substate != null)) {
 				continue;
+			}
 
-			if ((timer.ms -= delta) <= 0) {
+			if (osTime >= timer.osTime + timer.targetTime) {
 				timer.onComplete();
-				timer.loopsLeft--;
-				timer.ms = Std.int(timer.oldTime * 1000);
+				timer.osTime += timer.targetTime;
 
-				if (timer.loopsLeft < 1) {
-					timers.remove(timer);
-					continue;
+				if (timer.loopsLeft != -1) {
+					if (timer.loopsLeft < 1) {
+						timers.remove(timer);
+						continue;
+					}
+
+					timer.loopsLeft--;
 				}
 			}
 		}
+	}
+
+	/**
+	 * Reset the entire array for timers.
+	 */
+	public static function reset() {
+		timers = [];
 	}
 }

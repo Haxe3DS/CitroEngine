@@ -7,12 +7,12 @@ class CitroSort {
 	/**
 	 * Ascending sorting order, will sort from A-Z.
 	 */
-	public static var ascending:Int = -1;
+	public static var ascending(default, null):Int = -1;
 
 	/**
 	 * Descending sorting order, will sort from Z-A
 	 */
-	public static var descending:Int = 1;
+	public static var descending(default, null):Int = 1;
 
 	/**
 	 * Compares both `x` and `y` to sort between 1 or -1 or 0.

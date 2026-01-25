@@ -1,8 +1,6 @@
 package citro.math;
 
-import cxx.num.UInt32;
-
-@:cppInclude("citro2d.h")
+import cpp.UInt32;
 
 /**
  * Class that uses a randomizer by using stdlib and stuff.

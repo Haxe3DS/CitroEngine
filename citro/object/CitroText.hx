@@ -1,7 +1,8 @@
 package citro.object;
 
 import citro.backend.CitroColor;
-import cxx.num.UInt32;
+
+using StringTools;
 
 enum abstract Align(Int) {
 	/**
@@ -40,46 +41,36 @@ enum abstract BorderStyle(Int) {
 /**
  * Text Class for making, styling, and Making some useful modification for this text.
  */
+@:cppFileCode('
+#include "haxe3ds_Utils.h"
+
+static C2D_Font fnt = NULL;
+static C2D_TextBuf sbuf = NULL;
+C2D_Text c2dText;
+
+const Float offsets[8][2] = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+namespace textUtil {
+void createText(citro::object::CitroText_obj* value) {
+	C2D_TextBufClear(sbuf);
+	C2D_TextFontParse(&c2dText, value->defaultFont ? value->defaultFont : fnt, sbuf, value->text.utf8_str());
+	C2D_TextOptimize(&c2dText);
+
+	float width, height;
+	C2D_TextGetDimensions(&c2dText, value->scale->x, value->scale->y, &width, &height);
+	value->width = width;
+	value->height = height;
+}
+}')
+
 @:headerCode('
-#include <3ds.h>
 #include <citro2d.h>
 #include <citro3d.h>
 ')
-
-@:cppFileCode('
-static C2D_Font fnt = NULL;
-static C2D_TextBuf sbuf = NULL;
-int offsets[8][2] = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-
-static u32 applyAlpha(u32 color, float alpha) {
-	u8 a = static_cast<u8>(((color >> 24) & 0xFF) * fmin(alpha, 1)), r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-	return (a << 24) | (b << 16) | (g << 8) | r;
-}
-
-void createText(citro::object::CitroText* value) {
-	C2D_Text c2dText;
-	C2D_TextBufClear(sbuf);
-	C2D_TextFontParse(&c2dText, value->defaultFont ? value->defaultFont : fnt, sbuf, value->text.c_str());
-	C2D_TextOptimize(&c2dText);
-	bool cam = value->_isCam;
-	
-	float width, height;
-	C2D_TextGetDimensions(&c2dText, cam ? value->_scaleOrigin->x : value->scale->x, cam ? value->_scaleOrigin->y : value->scale->y, &width, &height);
-	value->width = width;
-	value->height = height;
-	value->c2dText = c2dText;
-}')
-
-@:headerClassCode('
-	C2D_Font defaultFont;
-	C3D_Mtx matrix;
-	C2D_Text c2dText;
-')
+@:headerClassCode('C2D_Font defaultFont;')
 class CitroText extends CitroObject {
 	/**
 	 * The current text being displayed in screen.
-	 * 
-	 * **1.1.0**: Now supports other types of variables!
 	 */
 	public var text:String = "";
 
@@ -121,64 +112,59 @@ class CitroText extends CitroObject {
 		this.text = Text;
 
 		untyped __cpp__('
-			Mtx_Identity(&this->matrix);
-			this->defaultFont = nullptr;
-
 			if (sbuf == NULL) {
 				fnt = C2D_FontLoadSystem(CFG_REGION_USA);
-				sbuf = C2D_TextBufNew(4096);
-			}
-
-			createText(this)
-		');
+				sbuf = C2D_TextBufNew(512);
+			} textUtil::createText(this) // {0}
+		', this.scale);
 	}
 
 	/**
 	 * Updates and draws the text.
-	 * @param delta Delta time parsed by `CitroState`
 	 */
-	override function update(delta:Int):Bool {
-		if (text.length == 0 || (super.update(delta) && !CitroInit.renderDebug)) {
+	override function update():Bool {
+		if (text.length == 0 || super.update()) {
 			return false;
 		}
 
 		untyped __cpp__('
-			createText(this);
-			float newX = this->x, sw = this->scale->x, sh = this->scale->y;
-			
+			textUtil::createText(this);
+			float newX = x, sw = scale->x, sh = scale->y;
+
 			u32 fl = C2D_WithColor;
-			switch (this->alignment) {
+			switch (alignment) {
 				case 0: break;
-				case 1: newX += {0} ? (320 - this->width) / 2 : (400 - this->width) / 2; break;
-				case 2: newX += {0} ? 320 - this->width : 400 - this->width; break;
+				case 1: newX += {0} ? (320 - width) / 2 : (400 - width) / 2; break;
+				case 2: newX += {0} ? 320 - width : 400 - width; break;
 			}
 
-			C2D_ViewSave(&this->matrix);
-			C2D_ViewTranslate(newX * this->factor->x, this->y * this->factor->y);
-			C2D_ViewTranslate(this->width * sw / 2, this->height * sh / 2);
-			C2D_ViewRotate(this->angle * M_PI / 180);
+			C3D_Mtx matrix;
+			Mtx_Diagonal(&matrix, 1.0f, 1.0f, 1.0f, 1.0f);
+			C2D_ViewSave(&matrix);
+			C2D_ViewTranslate(newX, y);
+			C2D_ViewTranslate(width * sw / 2.0, height * sh / 2.0);
+			C2D_ViewRotateDegrees(angle);
 			C2D_ViewScale(sw, sh);
-			C2D_ViewTranslate(-this->width / 2, -this->height / 2);
+			C2D_ViewTranslate(-width / 2.0, -height / 2.0);
 
-
-			if (this->borderStyle != 0 && this->borderSize >= 0) {
-				u32 bCol = applyAlpha(this->borderColor, alpha);
-				switch(this->borderStyle) {
-					case 0: break;
+			if (borderStyle != 0 && borderSize >= 0) {
+				CONVERT_TO_COMPATIBLE_COLOR(borderColor)
+				switch(borderStyle) {
 					case 1: {
-						for (int i = 0; i < 8; i++) C2D_DrawText(&this->c2dText, fl, (offsets[i][0] * this->borderSize), (offsets[i][1] * this->borderSize), 0, 1, 1, bCol);
+						for (int i = 0; i < 8; i++) C2D_DrawText(&c2dText, fl, (offsets[i][0] * borderSize), (offsets[i][1] * borderSize), 0, 1, 1, finalColor);
 						break;
 					}
 					case 2: {
-						for (int i = 1; i < static_cast<int>(this->borderSize + 1); i++) C2D_DrawText(&this->c2dText, fl, -i, i, .5, 1, 1, bCol);
+						for (int i = 1; i < borderSize + 1; i++) C2D_DrawText(&c2dText, fl, -i, i, 0, 1, 1, finalColor);
 						break;
 					}
 				}
 			}
 
-			C2D_DrawText(&this->c2dText, fl, 0, 0, 0, 1, 1, applyAlpha(this->color, this->alpha));
-			C2D_ViewRestore(&this->matrix)
-		', render == BOTTOM);
+			CONVERT_TO_COMPATIBLE_COLOR(color)
+			C2D_DrawText(&c2dText, fl, 0, 0, 0, 1, 1, finalColor);
+			C2D_ViewRestore(&matrix)
+		', bottom);
 
 		return true;
 	}
@@ -188,11 +174,45 @@ class CitroText extends CitroObject {
 	 * @param path The file path to use, also make sure it's converted to BCFNT.
 	 */
 	public function loadFont(path:String):Bool {
-		return untyped __cpp__('(this->defaultFont = C2D_FontLoad(path.c_str())) != NULL');
+		final cacheFile:String = 'CitroText_${path.replace("_", "-")}';
+
+		var success:Bool = untyped __cpp__('(defaultFont = C2D_FontLoad(path.c_str())) != NULL');
+		if (success) {
+			CitroG.caches.set(cacheFile, untyped __cpp__('&defaultFont'));
+		} else {
+			success = CitroG.caches.exists(cacheFile);
+			if (success) {
+				final ptr = CitroG.caches[cacheFile];
+				untyped __cpp__('
+					defaultFont = (C2D_Font){0}.ptr;
+					if (!defaultFont) success = false;
+				', ptr);
+			}
+		}
+		return success;
+	}
+
+	/**
+	 * Sets all of border related variables to whatever you like, returns the same variable if you want to chain it.
+	 * @param color The Border Color to use, Defaults to Black.
+	 * @param size The Size for the Border to use, Defaults to 1.
+	 * @param style The Style for the Border to use, Defaults to OUTLINE.
+	 * @return The same variable if you want to chain them.
+	 */
+	public function setBorderStyle(color:CitroColor = 0xFF000000, size:Float = 1, style:BorderStyle = OUTLINE):CitroText {
+		borderColor = color;
+		borderSize = size;
+		borderStyle = style;
+		return this;
 	}
 
 	override function destroy() {
 		super.destroy();
-		if (CitroG.isNotNull(untyped __cpp__('this->defaultFont'))) untyped __cpp__('this->defaultFont = nullptr;');
+		untyped __cpp__('
+			if (defaultFont) {
+				C2D_FontFree(defaultFont);
+				defaultFont = nullptr;
+			}
+		');
 	}
 }

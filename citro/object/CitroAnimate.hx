@@ -1,10 +1,11 @@
 package citro.object;
 
+import sys.io.File;
 import citro.object.CitroSprite;
-import haxe3ds.stdutil.FSUtil;
 
 using StringTools;
 
+final keys:Array<String> = ["acceleration", "alpha", "angle", "bottom", "color", "scale"];
 private typedef CitroAnimateHeader = {
 	var frameX:Float;
 	var frameY:Float;
@@ -15,6 +16,7 @@ private typedef CitroAnimateHeader = {
  * A class for animation purpose.
  */
 class CitroAnimate extends CitroObject {
+
 	var timeLeft:Float = 0;
 	var sprites:Map<String, CitroAnimateHeader> = [];
 
@@ -51,7 +53,7 @@ class CitroAnimate extends CitroObject {
 	public function new(ceaFile:String, defaultAnim:String = "") {
 		super();
 
-		final file:String = FSUtil.readFile(ceaFile);
+		final file:String = File.getContent(ceaFile);
 		ceaFile = ceaFile.substr(0, ceaFile.lastIndexOf("/"));
 		if (file != "") {
 			var i:Int = 0;
@@ -98,37 +100,32 @@ class CitroAnimate extends CitroObject {
 			return false;
 		}
 		
-		final oldFrame:Int = frame;
-		frame = 0;
+		final animFormat:String = '$animation-0';
+		if (sprites.exists(animFormat)) {
+			timeLeft = 1000 / framerate;
+			finished = false;
+			curAnim = animation;
+			frame = 0;
 
-		for (key in sprites.keys()) {
-			if (key == '${animation}-0') {
-				timeLeft = 1000 / framerate;
-				curAnim = animation;
-				finished = false;
-
-				final spr:CitroSprite = sprites[key].sprite;
-				width  = spr.width;
-				height = spr.height;
-
-				return true;
-			}
+			final spr:CitroSprite = sprites[animFormat].sprite;
+			width  = spr.width;
+			height = spr.height;
+			return true;
 		}
 
-		frame = oldFrame;
 		return false;
 	}
 
-	function format() {
+	inline function format() {
 		return '${curAnim}-$frame';
 	}
 
-	override function update(delta:Int):Bool {
+	override function update():Bool {
 		if (isDestroyed) {
 			return false;
 		}
 
-		if ((timeLeft -= (render == BOTH ? delta / 2 : delta)) < 1) {
+		if ((timeLeft -= CitroG.deltaTime) < 1) {
 			timeLeft = 1000 / framerate;
 			frame++;
 			if (!sprites.exists(format())) {
@@ -144,16 +141,11 @@ class CitroAnimate extends CitroObject {
 		if (sprites.exists(format()) && visible) {
 			final header:CitroAnimateHeader = sprites.get(format());
 			final sprite:CitroSprite = header.sprite;
-			sprite.acceleration = acceleration;
-			sprite.alpha  = alpha;
-			sprite.angle  = angle;
-			sprite.render = render;
-			sprite.color  = color;
-			sprite.factor = factor;
-			sprite.scale  = scale;
+
+			for (key in keys) Reflect.setProperty(sprite, key, Reflect.getProperty(this, key));
 			sprite.x = x - (header.frameX * scale.x);
 			sprite.y = y - (header.frameY * scale.y);
-			return sprite.update(delta);
+			return sprite.update();
 		}
 
 		return false;

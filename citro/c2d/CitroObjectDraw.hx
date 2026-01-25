@@ -1,14 +1,13 @@
 package citro.util;
 
 import citro.backend.CitroColor;
-import cxx.num.UInt32;
 
 /**
  * Cool objects utility for making new styles.
  */
 @:cppFileCode('
 #include <citro2d.h>
-#include "citro_CitroInit.h"
+#include "citro_CitroGame.h"
 #include "citro_object_CitroSprite.h"
 ')
 
@@ -21,7 +20,7 @@ class CitroObjectDraw {
 	 * @param drawBottom Whetever or not it should draw in the bottom screen.
 	 * @return `true` if successfully drawn, `false` if one of the arrays is not greater than 2
 	 */
-	public static function drawTriangle(arrayX:Array<Float>, arrayY:Array<Float>, arrayC:Array<UInt32>, drawBottom:Bool = false):Bool {
+	public static function drawTriangle(arrayX:Array<Float>, arrayY:Array<Float>, arrayC:Array<CitroColor>, drawBottom:Bool = false):Bool {
 		if (arrayX.length > 2 && arrayY.length > 2 && arrayC.length > 0) {
 			while (arrayC.length < 3) {
 				arrayC.push(arrayC[0]);
@@ -30,9 +29,9 @@ class CitroObjectDraw {
 			untyped __cpp__('
 				C2D_SceneBegin(drawBottom ? bottomScreen : topScreen);
 				C2D_DrawTriangle(
-					(*arrayX)[0], (*arrayY)[0], colorConvert((*arrayC)[0]),
-					(*arrayX)[1], (*arrayY)[1], colorConvert((*arrayC)[1]),
-					(*arrayX)[2], (*arrayY)[2], colorConvert((*arrayC)[2]),
+					arrayX->__get(0), arrayY->__get(0), colorConvert(arrayC->__get(0)),
+					arrayX->__get(1), arrayY->__get(1), colorConvert(arrayC->__get(1)),
+					arrayX->__get(2), arrayY->__get(2), colorConvert(arrayC->__get(2)),
 					1
 				)
 			');
@@ -50,7 +49,7 @@ class CitroObjectDraw {
 	 * @param drawBottom Whetever or not it should draw in the bottom screen.
 	 * @return `true` if successfully drawn, `false` if one of the arrays is not greater than 1.
 	 */
-	public static function drawLine(arrayX:Array<Float>, arrayY:Array<Float>, arrayC:Array<UInt32>, thickness:Float = 4, drawBottom:Bool = false):Bool {
+	public static function drawLine(arrayX:Array<Float>, arrayY:Array<Float>, arrayC:Array<CitroColor>, thickness:Float = 4, drawBottom:Bool = false):Bool {
 		if (arrayX.length > 1 && arrayY.length > 1 && arrayC.length > 1) {
 			if (arrayC.length == 1) {
 				arrayC.push(arrayC[0]);
@@ -59,8 +58,8 @@ class CitroObjectDraw {
 			untyped __cpp__('
 				C2D_SceneBegin(drawBottom ? bottomScreen : topScreen);
 				C2D_DrawLine(
-					(*arrayX)[0], (*arrayY)[0], colorConvert((*arrayC)[0]),
-					(*arrayX)[1], (*arrayY)[1], colorConvert((*arrayC)[1]),
+					arrayX->__get(0), arrayY->__get(0), colorConvert(arrayC->__get(0)),
+					arrayX->__get(1), arrayY->__get(1), colorConvert(arrayC->__get(1)),
 					thickness, 1
 				)
 			');
@@ -86,8 +85,8 @@ class CitroObjectDraw {
 			untyped __cpp__('
 				C2D_SceneBegin(drawBottom ? bottomScreen : topScreen);
 				C2D_DrawRectangle(
-					x, y, 1, w, h, colorConvert((*color)[0]), colorConvert((*color)[1]),
-					colorConvert((*color)[2]), colorConvert((*color)[3])
+					x, y, 1, w, h, colorConvert(color->__get(0)), colorConvert(color->__get(1)),
+					colorConvert(color->__get(2)), colorConvert(color->__get(3))
 				)
 			');
 			true;
@@ -112,7 +111,7 @@ class CitroObjectDraw {
 
 		untyped __cpp__('
 			C2D_SceneBegin(drawBottom ? bottomScreen : topScreen);
-			C2D_DrawCircle(x, y, 1, radius, colorConvert((*color)[0]), colorConvert((*color)[1]), colorConvert((*color)[2]), colorConvert((*color)[3]))
+			C2D_DrawCircle(x, y, 1, radius, colorConvert(color->__get(0)), colorConvert(color->__get(1)), colorConvert(color->__get(2)), colorConvert(color->__get(3)))
 		');
 		return true;
 	}
@@ -136,7 +135,7 @@ class CitroObjectDraw {
 	
 		untyped __cpp__('
 			C2D_SceneBegin(drawBottom ? bottomScreen : topScreen);
-			C2D_DrawEllipse(x, y, 1, w, y, colorConvert((*color)[0]), colorConvert((*color)[1]), colorConvert((*color)[2]), colorConvert((*color)[3]))
+			C2D_DrawEllipse(x, y, 1, w, y, colorConvert(color->__get(0)), colorConvert(color->__get(1)), colorConvert(color->__get(2)), colorConvert(color->__get(3)))
 		');
 		return true;
 	}

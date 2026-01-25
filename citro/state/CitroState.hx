@@ -2,11 +2,8 @@ package citro.state;
 
 import citro.object.CitroObject;
 
-@:cppInclude("citro_CitroInit.h")
-@:cppInclude("citro2d.h")
-
 /**
- * States used for creating states and for whatever sprites to behave as.
+ * State for Handling What this state should do, Like for Adding Sprites, Checking Members, and More.
  */
 class CitroState {
 	/**
@@ -45,12 +42,8 @@ class CitroState {
 	}
 
 	function check(member:CitroObject):Bool {
-		if (member == null)
-			return true;
-
-		if (members.indexOf(member) > -1)
-			return true;
-
+		if (member == null) return true;
+		if (members.indexOf(member) > -1) return true;
 		return false;
 	}
 
@@ -91,15 +84,10 @@ class CitroState {
 	/**
 	 * Removes a sprite from member lists.
 	 * @param member Member to remove from list.
+	 * @param once Only do the action once?
 	 */
-	public function remove(member:CitroObject) {
-		var i:Int = members.length-1;
-		while (i != -1) {
-			if (members[i] == member) {
-				members.splice(i, 1);
-			}
-			i--;
-		}
+	public function remove(member:CitroObject, once:Bool = true) {
+		while (members.remove(member) && once) {}
 	}
 
 	/**
@@ -108,11 +96,11 @@ class CitroState {
 	 * @param substate Substate to use.
 	 */
 	public function openSubstate(substate:CitroSubState) {
-		if (CitroG.isNotNull(CitroInit.subState)) {
+		if (CitroG.substate != null) {
 			return;
 		}
 		
-		CitroInit.subState = substate;
+		CitroG.substate = substate;
 		substate.create();
 	}
 }

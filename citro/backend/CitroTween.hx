@@ -1,19 +1,7 @@
 package citro.backend;
 
-import cxx.VoidPtr;
+import haxe3ds.OS;
 import citro.math.CitroMath;
-import citro.object.CitroObject;
-
-enum abstract CitroObjVar(Int) {
-	var X;
-	var Y;
-	var WIDTH;
-	var HEIGHT;
-	var ANGLE;
-	var ALPHA;
-	var SCALE_X;
-	var SCALE_Y;
-}
 
 enum abstract CitroEase(Int) {
 	var LINEAR;
@@ -55,28 +43,16 @@ enum abstract CitroEase(Int) {
 	var ELASTIC_INOUT;
 }
 
-enum CTTypes {
-	OBJECT;
-	VARIABLE;
+enum abstract CTTypes(Int) {
+	var OBJECT;
+	var VARIABLE;
 }
 
 private typedef CitroTweenProps = {
-	/**
-	 * Common variable to use from CitroObject
-	 * 
-	 * @see enum abstract CitroEase
-	 */
-	var variableToUse:CitroObjVar;
-
-	/**
-	 * The destination for the float number to use.
-	 */
+	var variableToUse:String;
 	var destination:Float;
-
-	/**
-	 * Should not be used.
-	 */
-	var ?oldVar:Float;
+	var ?prop:Dynamic;
+	var oldValue:Float;
 }
 
 typedef CitroTweenOptions = {
@@ -97,11 +73,11 @@ typedef CitroTweenOptions = {
 }
 
 private typedef CitroTweenArray = {
-	variable:CitroObject,
+	variable:Null<Dynamic>,
 	props:Array<CitroTweenProps>,
+	oldTime:Int,
 	length:Float,
-	elapsed:Float,
-	isState:Bool,
+	state:Bool,
 	tweenType:CTTypes,
 	options:CitroTweenOptions
 }
@@ -109,34 +85,18 @@ private typedef CitroTweenArray = {
 /**
  * Class for doing tweens and such.
  */
-@:cppFileCode('
-#include <3ds.h>
-#include "citro_CitroInit.h"
-
-template<typename T>
-bool functionIsValid(const std::optional<T>& func) {
-	return func.has_value() && static_cast<bool>(func.value());
-}
-')
 class CitroTween {
 	public static var cta:Array<CitroTweenArray> = [];
 
-	static function hasValue(self:VoidPtr):Bool
-		return untyped __cpp__('{0}', self);
-
-	static function setupOptions(input:Null<CitroTweenOptions>):CitroTweenOptions {
-		if (!hasValue(untyped __cpp__('(void*&)({0})', input))) {
+	static function createOptions(option:Null<CitroTweenOptions>):CitroTweenOptions {
+		if (option == null) {
 			return {
-				ease: LINEAR,
-				onComplete: () -> {},
-				onUpdate: _ -> {}
-			};
+				ease: LINEAR
+			}
 		}
-		
-		if (!untyped __cpp__('(input.has_value() ? input.value() : std::make_shared<citro::backend::CitroTweenOptions>())->ease.has_value()')) input.ease = LINEAR;
-		if (!untyped __cpp__('functionIsValid({0})', input.onComplete)) input.onComplete = () -> {};
-		if (!untyped __cpp__('functionIsValid({0})', input.onUpdate)) input.onUpdate = _ -> {};
-		return input;
+
+		if (option.ease == null) option.ease = LINEAR;
+		return option;
 	}
 
 	/**
@@ -147,18 +107,23 @@ class CitroTween {
 	 * @param options The current options to set up for the tween, can be null for default settings.
 	 */
 	public static function tweenNumber(from:Float, to:Float, duration:Float = 1, options:Null<CitroTweenOptions> = null):Bool {
+		options = createOptions(options);
+		if (options.onUpdate == null) {
+			return false;
+		}
+
 		return cta.push({
 			variable: null,
 			props: [{
-				variableToUse: X,
+				variableToUse: "",
 				destination: to,
-				oldVar: from
+				oldValue: from
 			}],
-			elapsed: 0,
-			length: duration * 1000,
-			isState: !CitroG.isNotNull(CitroInit.subState),
+			oldTime: OS.time.toInt(),
+			length: Std.int(duration * 1000),
+			state: CitroG.substate == null,
 			tweenType: VARIABLE,
-			options: setupOptions(options)
+			options: options
 		}) != 0;
 	}
 
@@ -169,33 +134,54 @@ class CitroTween {
 	 * @param duration How long in seconds do you want it to tween for?
 	 * @param options The current options to set up for the tween, can be null for default settings.
 	 */
-	public static function tweenObject(object:CitroObject, props:Map<CitroObjVar, Float>, duration:Float = 1, options:Null<CitroTweenOptions> = null):Bool {
-		final propStates:Array<CitroTweenProps> = [for (prop in props.keys()) {
-			variableToUse: prop,
-			destination: props[prop],
-			oldVar: switch (prop) {
-				case X: object.x;
-				case Y: object.y;
-				case WIDTH: object.width;
-				case HEIGHT: object.height;
-				case ANGLE: object.angle;
-				case ALPHA: object.alpha;
-				case SCALE_X: object.scale.x;
-				case SCALE_Y: object.scale.y;
-			}
-		}];
-
-		if (propStates.length == 0)
+	public static function tweenObject(object:Dynamic, props:Map<String, Float>, duration:Float = 1, options:Null<CitroTweenOptions> = null):Bool {
+		if (object == null || !Reflect.isObject(object)) {
 			return false;
+		}
+
+		final propStates:Array<CitroTweenProps> = [];
+		for (prop => item in props.keyValueIterator()) {
+			final fieldPaths:Array<String> = prop.split(".");
+
+			var field = object;
+			if (fieldPaths.length > 1) {
+				for (index => path in fieldPaths) {
+					if (index == fieldPaths.length-1) {
+						break;
+					}
+
+					field = Reflect.getProperty(field, path);
+					if (!Reflect.isObject(field)) {
+						throw 'Object Property "$path" is not an object.';
+					}
+				}
+			}
+
+			if (field == null) {
+				throw 'Object does not have the property "$prop"';
+			}
+
+			final pName:String = fieldPaths.pop();
+			propStates.push({
+				variableToUse: pName,
+				destination: item,
+				oldValue: Reflect.getProperty(field, pName),
+				prop: field
+			});
+		}
+
+		if (propStates.length == 0) {
+			return false;
+		}
 
 		return cta.push({
 			variable: object,
 			props: propStates,
-			elapsed: 0,
+			oldTime: OS.time.toInt(),
 			length: duration * 1000,
-			isState: !CitroG.isNotNull(CitroInit.subState),
+			state: CitroG.substate == null,
 			tweenType: OBJECT,
-			options: setupOptions(options)
+			options: createOptions(options)
 		}) != 0;
 	}
 
@@ -203,41 +189,35 @@ class CitroTween {
 	 * Updates all tweens, should not be used.
 	 * @param delta Time since last frame in milliseconds.
 	 */
-	public static function update(delta:Int) {
+	public static function update() {
 		for (spr in cta) {
-			if (spr.isState == hasValue(untyped __cpp__('(void*&)({0})', CitroInit.subState)))
+			if (spr.state == (CitroG.substate != null)) {
 				continue;
+			}
 
-			spr.elapsed += delta;
-			final progress:Float = CitroMath.clamp(spr.elapsed / spr.length, 0, 1);
-
+			final progress:Float = CitroMath.clamp((OS.time.toInt() - spr.oldTime) / spr.length, 0, 1);
 			var useVar:Float = progress;
 			for (prop in spr.props) {
-				final res:Float = CitroMath.lerp(prop.oldVar, prop.destination, applyEase(spr.options.ease, progress));
+				final res:Float = CitroMath.lerp(prop.oldValue, prop.destination, applyEase(spr.options.ease, progress));
 				switch (spr.tweenType) {
 					case OBJECT:
-						switch(prop.variableToUse) {
-							case ALPHA: spr.variable.alpha = res;
-							case ANGLE: spr.variable.angle = res;
-							case HEIGHT: spr.variable.height = res;
-							case SCALE_X: spr.variable.scale.x = res;
-							case SCALE_Y: spr.variable.scale.y = res;
-							case WIDTH: spr.variable.width = res;
-							case X: spr.variable.x = res;
-							case Y: spr.variable.y = res;
-						}
-					
+						Reflect.setProperty(prop.prop, prop.variableToUse, res);
+
 					case VARIABLE:
 						useVar = res;
 				}
 			}
 
+			if (spr.options.onUpdate != null) {
+				spr.options.onUpdate(useVar);
+			}
+
 			if (progress >= 1) {
-				spr.options.onComplete();
+				if (spr.options.onComplete != null) {
+					spr.options.onComplete();
+				}
 				cta.remove(spr);
 			}
-			
-			spr.options.onUpdate(useVar);
 		}
 	}
 
@@ -245,10 +225,12 @@ class CitroTween {
 	 * Cancels any tweens provided from the object argument.
 	 * @param object Object to cancel tweens.
 	 */
-	public static function cancelTweensFrom(object:CitroObject) {
-		for (s in cta)
-			if (s.variable == object)
+	public static function cancelTweensFrom(object:Dynamic) {
+		for (s in cta) {
+			if (s.variable == object) {
 				cta.remove(s);
+			}
+		}
 	}
 
 	static function smoothStepInOut(t:Float):Float {
@@ -274,7 +256,7 @@ class CitroTween {
 		t *= 2;
 		if (t < 1) return t * t * (2.70158 * t - 1.70158) / 2;
 		t--;
-		return (1 - (--t) * (t) * (-2.70158 * t - 1.70158)) / 2 + .5;
+		return (1 - (t--) * (t) * (-2.70158 * t - 1.70158)) / 2 + .5;
 	}
 
 	static function applyEase(ease:CitroEase, t:Float):Float {
@@ -292,19 +274,19 @@ class CitroTween {
 			case CUBE_IN: t * t * t;
 			case CUBE_OUT: 1 + (t--) * t * t;
 			case CUBE_INOUT: t <= .5 ? t * t * t * 4 : 1 + (t--) * t * t * 4;
-			
+
 			case QUART_IN: t * t * t * t;
 			case QUART_OUT: 1 - (t -= 1) * t * t * t;
 			case QUART_INOUT: t <= .5 ? t * t * t * t * 8 : (1 - (t = t * 2 - 2) * t * t * t) / 2 + .5;
-			
+
 			case QUINT_IN: t * t * t * t * t;
 			case QUINT_OUT: (t = t - 1) * t * t * t * t + 1;
 			case QUINT_INOUT: ((t *= 2) < 1) ? (t * t * t * t * t) / 2 : ((t -= 2) * t * t * t * t + 2) / 2;
-			
+
 			case SMOOTHSTEP_IN: 2 * smoothStepInOut(t / 2);
 			case SMOOTHSTEP_OUT: 2 * smoothStepInOut(t / 2 + 0.5) - 1;
 			case SMOOTHSTEP_INOUT: smoothStepInOut(t);
-			
+
 			case SMOOTHERSTEP_IN: 2 * smootherStepInOut(t / 2);
 			case SMOOTHERSTEP_OUT: 2 * smootherStepInOut(t / 2 + 0.5) - 1;
 			case SMOOTHERSTEP_INOUT: smootherStepInOut(t);
@@ -312,23 +294,23 @@ class CitroTween {
 			case BOUNCE_IN: 1 - bounceOut(1 - t);
 			case BOUNCE_OUT: bounceOut(t);
 			case BOUNCE_INOUT: t < 0.5 ? (1 - bounceOut(1 - 2 * t)) / 2 : (1 + bounceOut(2 * t - 1)) / 2;
-			
+
 			case CIRC_IN: -(Math.sqrt(1 - t * t) - 1);
 			case CIRC_OUT: Math.sqrt(1 - (t - 1) * (t - 1));
 			case CIRC_INOUT: t <= .5 ? (Math.sqrt(1 - t * t * 4) - 1) / -2 : (Math.sqrt(1 - (t * 2 - 2) * (t * 2 - 2)) + 1) / 2;
-			
+
 			case EXPO_IN: Math.pow(2, 10 * (t - 1));
 			case EXPO_OUT: -Math.pow(2, -10 * t) + 1;
 			case EXPO_INOUT: t < .5 ? Math.pow(2, 10 * (t * 2 - 1)) / 2 : (-Math.pow(2, -10 * (t * 2 - 1)) + 2) / 2;
-			
+
 			case BACK_IN: t * t * (2.70158 * t - 1.70158);
-			case BACK_OUT: 1 - (--t) * (t) * (-2.70158 * t - 1.70158);
+			case BACK_OUT: 1 - (t--) * (t) * (-2.70158 * t - 1.70158);
 			case BACK_INOUT: backInOut(t);
-			
+
 			case ELASTIC_IN: -(1 * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - (.4 / (2 * Math.PI) * Math.asin(1 / 1))) * (2 * Math.PI) / .4));
 			case ELASTIC_OUT: (1 * Math.pow(2, -10 * t) * Math.sin((t - (.4 / (2 * Math.PI) * Math.asin(1 / 1))) * (2 * Math.PI) / .4) + 1);
 			case ELASTIC_INOUT: t < 0.5 ? -0.5 * (Math.pow(2, 10 * (t -= 0.5)) * Math.sin((t - (.4 / 4)) * (2 * Math.PI) / .4)) : Math.pow(2, -10 * (t -= 0.5)) * Math.sin((t - (.4 / 4)) * (2 * Math.PI) / .4) * 0.5 + 1;
-			
+
 			default: t;
 		}
 	}

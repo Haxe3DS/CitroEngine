@@ -22,15 +22,14 @@ class CitroMath {
 	 */
 	public static function roundDecimal(Value:Float, Precision:Int):Float {
 		var mult:Float = 1;
-		for (i in 0...Precision)
+		for (_ in 0...Precision)
 			mult *= 10;
 
 		return Math.fround(Value * mult) / mult;
 	}
 
 	/**
-	 * Returns the linear interpolation of two numbers if `ratio`
-	 * is between 0 and 1, and the linear extrapolation otherwise.
+	 * Returns the linear interpolation of two numbers if `ratio` is between 0 and 1, and the linear extrapolation otherwise.
 	 *
 	 * Examples:
 	 *

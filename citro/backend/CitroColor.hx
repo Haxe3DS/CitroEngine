@@ -1,9 +1,8 @@
 package citro.backend;
 
 import citro.math.CitroMath;
-import citro.util.CitroStringUtil;
-import cxx.num.UInt8;
-import cxx.num.UInt32;
+import cpp.UInt8;
+import cpp.UInt32;
 
 /**
  * Advanced coloring options.
@@ -54,6 +53,6 @@ enum abstract CitroColor(UInt32) from UInt32 to UInt32 {
 	}
 
 	public function toString() {
-		return CitroStringUtil.numberToHex(this);
+		return StringTools.hex(this);
 	}
 }

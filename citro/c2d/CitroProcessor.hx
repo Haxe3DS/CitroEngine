@@ -3,7 +3,7 @@ package citro.c2d;
 /**
  * Class for processing time and other utilities.
  */
-@:cppFileCode("#include <citro2d.h>")
+@:cppInclude("citro2d.h")
 class CitroProcessor {
 	/**
 	 * Retrieves the current command buffer usage.

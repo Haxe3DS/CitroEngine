@@ -15,10 +15,11 @@ class CitroSubState extends CitroState {
 	public function new(color:CitroColor = 0x0) {
 		super();
 
-		for (i in 0...2) {
+		final y:Int = 2;
+		for (i in 0...y) {
 			var col:CitroSprite = new CitroSprite();
 			col.makeGraphic(400, 240, color);
-			col.render = i == 1 ? TOP : BOTTOM;
+			col.bottom = i == 1;
 			add(col);
 		}
 	}
@@ -32,7 +33,7 @@ class CitroSubState extends CitroState {
 	 */
 	public function close() {
 		destroy();
-		CitroInit.destroySS = true;
+		CitroG.substate = null;
 	}
 
 	override function openSubstate(substate:CitroSubState) {
