@@ -56,12 +56,12 @@ class CitroGame {
 	 * Sets up everything to get Citro Engine Running, and Make your 3DS Game come back to life!
 	 * @param state State to use, do NOT use `null`, if so then it quits immediately.
 	 */
-	public function new(state:CitroState) {
+	public static function start(state:CitroState) {
 		if (state == null) {
 			return;
 		}
 
-		GFX.initDefault();
+		GFX.init();
 		RomFS.init();
 
 		untyped __cpp__('
@@ -75,15 +75,15 @@ class CitroGame {
 
 		(CitroG.state = state).create();
 		while (APT.mainLoop() && !_shouldQuit) {
-			final old:UInt64 = OS.time;
-			var dt:Int = CitroG.deltaTime;
+			final old = OS.time;
+			var dt = CitroG.deltaTime;
 
 			untyped __cpp__('
 				C2D_TargetClear(topScreen, 0xFF000000);
 				C2D_TargetClear(bottomScreen, 0xFF000000);
 				C3D_FrameBegin(C3D_FRAME_SYNCDRAW)
 			');
-			
+
 			CitroTween.update();
 			CitroTimer.update();
 			CitroG.state.update(dt);
@@ -102,7 +102,7 @@ class CitroGame {
 				dt;
 			};
 		}
-		
+
 		untyped __cpp__('
 			C3D_Fini();
 			C2D_Fini()

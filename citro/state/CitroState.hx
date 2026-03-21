@@ -38,7 +38,7 @@ class CitroState {
 			member.destroy();
 		}
 
-		members = [];
+		members.splice(0, members.length);
 	}
 
 	function check(member:CitroObject):Bool {

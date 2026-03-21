@@ -174,21 +174,21 @@ class CitroText extends CitroObject {
 	 * @param path The file path to use, also make sure it's converted to BCFNT.
 	 */
 	public function loadFont(path:String):Bool {
-		final cacheFile:String = 'CitroText_${path.replace("_", "-")}';
+		var success = false;
+		if (CitroG.caches.cache.exists(path)) {
+			untyped __cpp__('
+				defaultFont = (C2D_Font){0};
+				success = defaultFont != nullptr
+			', CitroG.caches.get(path));
+		}
 
-		var success:Bool = untyped __cpp__('(defaultFont = C2D_FontLoad(path.c_str())) != NULL');
-		if (success) {
-			CitroG.caches.set(cacheFile, untyped __cpp__('&defaultFont'));
-		} else {
-			success = CitroG.caches.exists(cacheFile);
+		if (!success) {
+			success = untyped __cpp__('(defaultFont = C2D_FontLoad(path.c_str())) != NULL');
 			if (success) {
-				final ptr = CitroG.caches[cacheFile];
-				untyped __cpp__('
-					defaultFont = (C2D_Font){0}.ptr;
-					if (!defaultFont) success = false;
-				', ptr);
+				CitroG.caches.set(path, untyped __cpp__('defaultFont'));
 			}
 		}
+
 		return success;
 	}
 
@@ -199,7 +199,7 @@ class CitroText extends CitroObject {
 	 * @param style The Style for the Border to use, Defaults to OUTLINE.
 	 * @return The same variable if you want to chain them.
 	 */
-	public function setBorderStyle(color:CitroColor = 0xFF000000, size:Float = 1, style:BorderStyle = OUTLINE):CitroText {
+	inline public function setBorderStyle(color:CitroColor = 0xFF000000, size:Float = 1, style:BorderStyle = OUTLINE):CitroText {
 		borderColor = color;
 		borderSize = size;
 		borderStyle = style;

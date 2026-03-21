@@ -1,6 +1,6 @@
 package citro;
 
-import haxe3ds.Types.Result;
+import citro.backend.CitroCache;
 import citro.backend.CitroTimer;
 import citro.backend.CitroTween;
 import citro.math.CitroRandom;
@@ -8,13 +8,14 @@ import citro.object.CitroObject;
 import citro.state.CitroState;
 import citro.state.CitroSubState;
 
-import cpp.Pointer;
+import cpp.Star;
 
 import haxe3ds.applet.WebBrowser;
 import haxe3ds.services.FS;
 import haxe3ds.services.HID;
+import haxe3ds.types.Result;
 
-extern abstract VoidPtr(Pointer<Void>) {}
+extern abstract VoidPtr(Star<Void>) {}
 
 /**
  * The main class for all of your Game Utility Needs and Handlings.
@@ -26,13 +27,6 @@ extern abstract VoidPtr(Pointer<Void>) {}
  * - Save Management, To Edit, Save, Import, and even has Error Handling!
  * - Basic Utility Functions such as `CitroG.overlaps` & `CitroG.isTouching`
  */
-@:cppFileCode('
-void SUPER_FREE(void **ptr2ptr) {
-	if (ptr2ptr != nullptr && *ptr2ptr != nullptr) {
-		free(*ptr2ptr);
-		*ptr2ptr = NULL;
-	}
-}')
 class CitroG {
 	/**
 	 * Current width for the Top 3DS Screen, This is an inline variable so it's read only.
@@ -89,7 +83,7 @@ class CitroG {
 	 * 
 	 * TODO: Maybe free them if it hasn't been used in a certain period of time?
 	 */
-	public static var caches:Map<String, VoidPtr> = [];
+	public static var caches:CitroCache = new CitroCache();
 
 	/**
 	 * Function to check if both of the objects are overlapping or not.
@@ -127,7 +121,7 @@ class CitroG {
 	 * @returns `true` if overlapped, false if not or doesn't match the 1st-4th list above
 	 */
 	public static function isTouching(obj:CitroObject):Bool {
-		if (obj == null || !obj.bottom || !obj.visible || !HID.keyHeld(Key.TOUCH)) {
+		if (obj == null || !obj.bottom || !obj.visible || !HID.keyHeld(HIDKey.TOUCH)) {
 			return false;
 		}
 
@@ -179,9 +173,9 @@ class CitroG {
 	}
 
 	/**
-	 * A function to Switch State without doing the trouble.
+	 * A function to Switch State without doing any of the troubling task.
 	 * 
-	 * This clears timers, tweens, and destroys states to comply with the new State, now with `null` checks!
+	 * This clears timers, tweens, destroys states, and clears caches to comply with the new State, now with `null` checks!
 	 * 
 	 * @param State The new state you want to switch to.
 	 */
@@ -189,9 +183,10 @@ class CitroG {
 		if (State == null) return;
 
 		CitroTimer.reset();
-		CitroTween.cta = [];
+		CitroTween.cta.splice(0, CitroTween.cta.length);
 
 		state.destroy();
+		caches.clear();
 		(state = State).create();
 	}
 
@@ -202,7 +197,7 @@ class CitroG {
 	 * - Substate Closing (+ null checking)
 	 * - Current State Closing.
 	 * - Flushing the Save (if you've forgotten it.)
-	 * - `free()`ing to get your Memory back.
+	 * - Clearing the whole cache to get your Memory back.
 	 * 
 	 * This is a **ONE TIME** call, calling it twice will ***NOT*** do anything to prevent throwing an exception.
 	 */
@@ -217,24 +212,6 @@ class CitroG {
 
 		if (save.flush()) FS.flushAndCommit();
 		FS.exit();
-
-		for (key => value in caches.keyValueIterator()) {
-			final _ptr = value;
-			untyped __cpp__('
-				void* ptr = {0}.ptr;
-				if (!ptr) continue
-			', _ptr);
-
-			final split:Array<String> = key.split("_");
-			switch (split[0]) {
-				case "CitroSprite":
-					untyped __cpp__('C2D_SpriteSheetFree(ptr)');
-				case "CitroText":
-					untyped __cpp__('C2D_FontFree(ptr)');
-				default:
-					untyped __cpp__('SUPER_FREE((void**)&ptr)'); // calling my awesome
-			}
-		}
 
 		caches.clear();
 	}

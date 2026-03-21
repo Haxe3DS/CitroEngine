@@ -1,5 +1,7 @@
 package citro.object;
 
+import cpp.Pointer;
+import citro.CitroG.VoidPtr;
 import citro.backend.CitroColor;
 
 using StringTools;
@@ -19,8 +21,6 @@ using StringTools;
 #include <citro3d.h>
 #include "citro/CitroGame.h"
 #include "haxe3ds_Utils.h"
-
-C2D_ImageTint tint;
 ')
 class CitroSprite extends CitroObject {
 	/**
@@ -47,7 +47,7 @@ class CitroSprite extends CitroObject {
 	 * @param Height The height to set as.
 	 * @param Col The color in hex 0xAARRGGBB to set as.
 	 */
-	public function makeGraphic(Width:Float, Height:Float, Col:CitroColor = 0xFFFFFFFF):CitroSprite {
+	inline public function makeGraphic(Width:Float, Height:Float, Col:CitroColor = 0xFFFFFFFF):CitroSprite {
 		width  = Width;
 		height = Height;
 		color  = Col;
@@ -60,10 +60,8 @@ class CitroSprite extends CitroObject {
 	 * @return true if successfully loaded, false if not loaded.
 	 */
 	public function loadGraphic(file:String):Bool {
-		final cacheFile:String = 'CitroSprite_${file.replace("_", "-")}';
-		if (CitroG.caches.exists(cacheFile)) {
-			final ptr = CitroG.caches[cacheFile];
-			untyped __cpp__('data.ss = (C2D_SpriteSheet)({0}.ptr)', ptr);
+		if (CitroG.caches.cache.exists(file)) {
+			untyped __cpp__('data.ss = (C2D_SpriteSheet){0}', CitroG.caches.get(file));
 		}
 
 		untyped __cpp__('
@@ -75,10 +73,10 @@ class CitroSprite extends CitroObject {
 			C2D_Image ret = C2D_SpriteSheetGetImage(data.ss, 0);
 			data.image = ret;
 			width = ret.subtex->width;
-			height = ret.subtex->height
+			height = ret.subtex->height;
 		');
 
-		CitroG.caches.set(cacheFile, untyped __cpp__('&data.ss'));
+		CitroG.caches.set(file, untyped __cpp__('data.ss'));
 		return true;
 	}
 
@@ -103,6 +101,7 @@ class CitroSprite extends CitroObject {
 				CONVERT_TO_COMPATIBLE_COLOR(color)
 				C2D_DrawRectSolid(0, 0, 0, width, height, finalColor);
 			} else {
+				C2D_ImageTint tint;
 				C2D_PlainImageTint(
 					&tint,
 					C2D_Color32(
@@ -123,7 +122,7 @@ class CitroSprite extends CitroObject {
 
 	override function destroy() {
 		super.destroy();
-		
+
 		untyped __cpp__('
 			if (data.ss) {
 				C2D_SpriteSheetFree(data.ss);

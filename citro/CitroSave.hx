@@ -64,11 +64,9 @@ class CitroSave {
 	 * @param dirs How many directories that should be stored? Leave at 1 if you just want the root only.
 	 */
 	public function new(files:Int = 16, dirs:Int = 1) {
-		if (Env.is3DSX) {
-			status = USES_3DSX;
-			return;
-		}
-
+		#if IS_3DSX
+		status = USES_3DSX;
+		#else
 		if (FS.mountSaveData("ext", files, dirs).isFail()) {
 			status = FS_ERROR;
 			return;
@@ -84,6 +82,7 @@ class CitroSave {
 		}
 
 		status = SUCCESSFUL;
+		#end
 	}
 
 	/**
@@ -96,8 +95,10 @@ class CitroSave {
 		}
 
 		try {
+			#if IS_CIA
 			File.saveContent("ext:/save.json", Json.stringify(data));
 			FS.flushAndCommit();
+			#end
 			return true;
 		} catch(e) {
 			return false;
