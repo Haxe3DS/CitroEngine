@@ -1,4 +1,4 @@
-package citro.util;
+package citro.c2d;
 
 import citro.backend.CitroColor;
 
@@ -7,8 +7,8 @@ import citro.backend.CitroColor;
  */
 @:cppFileCode('
 #include <citro2d.h>
-#include "citro_CitroGame.h"
-#include "citro_object_CitroSprite.h"
+#include "citro/CitroGame.h"
+#include "citro/object/CitroSprite.h"
 ')
 
 class CitroObjectDraw {
@@ -50,7 +50,7 @@ class CitroObjectDraw {
 	 * @return `true` if successfully drawn, `false` if one of the arrays is not greater than 1.
 	 */
 	public static function drawLine(arrayX:Array<Float>, arrayY:Array<Float>, arrayC:Array<CitroColor>, thickness:Float = 4, drawBottom:Bool = false):Bool {
-		if (arrayX.length > 1 && arrayY.length > 1 && arrayC.length > 1) {
+		if (arrayX.length > 1 && arrayY.length > 1 && arrayC.length > 0) {
 			if (arrayC.length == 1) {
 				arrayC.push(arrayC[0]);
 			}
@@ -79,7 +79,7 @@ class CitroObjectDraw {
 	 * @return `true` if length is not equal than 0
 	 */
 	public static function drawRect(x:Float, y:Float, w:Float, h:Float, color:Array<CitroColor>, drawBottom:Bool = false):Bool {
-		return color.length > 1 ? {
+		return color.length > 0 ? {
 			while (color.length < 4)
 				color.push(color[0]);
 			untyped __cpp__('
